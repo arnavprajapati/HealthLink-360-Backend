@@ -8,7 +8,7 @@ router.post('/signup', signup);
 router.post('/login', login);
 router.post('/google-login', googleLogin);
 
-router.post('/logout', protect, logout);
+router.post('/logout', logout);
 router.get('/me', protect, getCurrentUser);
 
 export default router;
