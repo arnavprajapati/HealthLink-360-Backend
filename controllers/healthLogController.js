@@ -20,17 +20,17 @@ export const createHealthLog = async (req, res) => {
         const fileType = req.file.mimetype.startsWith('image') ? 'image' : 'pdf';
 
         let aiData = null;
-        
+
         try {
             aiData = await analyzeHealthDocument(req.file.path, fileType);
             console.log('AI Analysis Result:', JSON.stringify(aiData, null, 2));
         } catch (aiError) {
             console.error('AI Analysis Error:', aiError);
-            
+
             if (fs.existsSync(req.file.path)) {
                 fs.unlinkSync(req.file.path);
             }
-            
+
             return res.status(500).json({
                 success: false,
                 message: 'Failed to analyze the medical report. Please try again with a clearer image or PDF.'
@@ -39,10 +39,10 @@ export const createHealthLog = async (req, res) => {
 
         const testDateString = aiData.testDate;
         let finalTestDate = null;
-        
+
         if (testDateString) {
             const dateObj = new Date(testDateString);
-            if (!isNaN(dateObj.getTime())) { 
+            if (!isNaN(dateObj.getTime())) {
                 finalTestDate = dateObj;
             } else {
                 console.warn(`AI returned invalid date string: ${testDateString}. Setting testDate to null to prevent Mongoose validation error.`);
@@ -166,7 +166,7 @@ export const getTestDetails = async (req, res) => {
             });
         }
 
-        const reading = healthLog.readings.find(r => 
+        const reading = healthLog.readings.find(r =>
             r.testName.toLowerCase() === testName.toLowerCase()
         );
 
@@ -183,12 +183,12 @@ export const getTestDetails = async (req, res) => {
                 const status = reading.status || 'normal';
                 reading.healthInfo = {
                     description: knowledge.description,
-                    causes: status === 'low' ? knowledge.causes?.low : 
-                           status === 'high' ? knowledge.causes?.high : [],
-                    recommendations: status === 'low' ? knowledge.recommendations?.low : 
-                                     status === 'high' ? knowledge.recommendations?.high : [],
-                    symptoms: status === 'low' ? knowledge.symptoms?.low : 
-                              status === 'high' ? knowledge.symptoms?.high : [],
+                    causes: status === 'low' ? knowledge.causes?.low :
+                        status === 'high' ? knowledge.causes?.high : [],
+                    recommendations: status === 'low' ? knowledge.recommendations?.low :
+                        status === 'high' ? knowledge.recommendations?.high : [],
+                    symptoms: status === 'low' ? knowledge.symptoms?.low :
+                        status === 'high' ? knowledge.symptoms?.high : [],
                     relatedTests: knowledge.relatedTests || []
                 };
             }
@@ -233,7 +233,7 @@ export const getHealthStats = async (req, res) => {
         let abnormalCount = 0;
         recentLogs.forEach(log => {
             if (log.readings) {
-                abnormalCount += log.readings.filter(r => 
+                abnormalCount += log.readings.filter(r =>
                     r.status === 'high' || r.status === 'low' || r.status === 'critical'
                 ).length;
             }
@@ -289,6 +289,145 @@ export const deleteHealthLog = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || 'Failed to delete health log'
+        });
+    }
+};
+
+export const getCurrentVitals = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const latestLog = await HealthLog.findOne({ userId })
+            .sort({ recordDate: -1, createdAt: -1 })
+            .limit(1);
+
+        if (!latestLog) {
+            return res.status(200).json({
+                success: true,
+                data: { vitals: null }
+            });
+        }
+
+        const getReadingValue = (name) => {
+            const reading = latestLog.readings.find(r =>
+                r.testName.toLowerCase() === name.toLowerCase()
+            );
+            return reading ? `${reading.value} ${reading.unit || ''}`.trim() : null;
+        };
+
+        const vitals = {
+            weight: getReadingValue('weight'),
+            height: getReadingValue('height'),
+            bmi: getReadingValue('bmi'),
+            smokingStatus: latestLog.description?.toLowerCase().includes('smoker') ? 'Current smoker (from notes)' : 'Not recorded/Non-smoker',
+            recordedDate: latestLog.testDate || latestLog.recordDate
+        };
+
+        res.status(200).json({
+            success: true,
+            data: {
+                vitals,
+                logId: latestLog._id
+            }
+        });
+
+    } catch (error) {
+        console.error('Get Current Vitals Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to fetch current vitals'
+        });
+    }
+};
+
+const calculateBMI = (weightLbs, heightFt, heightIn) => {
+    const weightKg = parseFloat(weightLbs) * 0.453592;
+    const heightTotalInches = (parseFloat(heightFt) * 12) + parseFloat(heightIn);
+    const heightMeters = heightTotalInches * 0.0254;
+
+    if (weightKg > 0 && heightMeters > 0) {
+        return (weightKg / (heightMeters * heightMeters)).toFixed(2);
+    }
+    return null;
+};
+
+export const createManualLog = async (req, res) => {
+    try {
+        const { weightLbs, heightFt, heightIn, smokingStatus, description } = req.body;
+        const userId = req.user.id;
+
+        if (!weightLbs || !heightFt) {
+            return res.status(400).json({
+                success: false,
+                message: 'Weight and Height are required.'
+            });
+        }
+
+        const bmi = calculateBMI(weightLbs, heightFt, heightIn || 0);
+
+        const readings = [];
+
+        readings.push({
+            testName: 'Weight',
+            value: weightLbs,
+            unit: 'lbs',
+            category: 'Vitals',
+            status: 'normal', 
+        });
+
+        readings.push({
+            testName: 'Height',
+            value: `${heightFt}'${heightIn || 0}"`,
+            unit: 'ft/in',
+            category: 'Vitals',
+            status: 'normal',
+        });
+
+        if (bmi) {
+            readings.push({
+                testName: 'BMI',
+                value: bmi,
+                unit: 'kg/m²',
+                category: 'Vitals',
+                status: 'normal',
+            });
+        }
+
+        let finalDescription = description || '';
+        if (smokingStatus && smokingStatus !== 'non-smoker') {
+            finalDescription = `${smokingStatus}. ${finalDescription}`.trim();
+        }
+
+
+        const healthLog = await HealthLog.create({
+            userId,
+            diseaseType: 'general', 
+            detectedDisease: 'general',
+            readings: readings,
+            aiAnalysis: {
+                summary: 'Manually entered vital signs.',
+                riskLevel: 'low',
+                recommendations: ['Monitor vitals regularly.'],
+                keyFindings: readings.map(r => `${r.testName}: ${r.value} ${r.unit}`)
+            },
+            description: finalDescription,
+            fileUrl: '/manual/vitals',
+            fileName: `Vitals-${new Date().toISOString()}`,
+            fileType: 'manual',
+            testDate: new Date(),
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Vitals saved successfully',
+            data: healthLog
+        });
+
+    } catch (error) {
+        console.error('Create Manual Log Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to save manual vitals'
         });
     }
 };

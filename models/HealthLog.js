@@ -1,3 +1,4 @@
+// fileName: HealthLog.js (UPDATED)
 import mongoose from 'mongoose';
 
 const healthLogSchema = new mongoose.Schema({
@@ -65,7 +66,7 @@ const healthLogSchema = new mongoose.Schema({
     },
     fileType: {
         type: String,
-        enum: ['image', 'pdf'],
+        enum: ['image', 'pdf', 'manual'],
         required: true
     },
     rawAiData: {

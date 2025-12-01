@@ -5,7 +5,9 @@ import {
     getHealthLogById,
     getTestDetails,
     getHealthStats,
-    deleteHealthLog
+    deleteHealthLog,
+    getCurrentVitals,
+    createManualLog
 } from '../controllers/healthLogController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 import upload from '../config/multerConfig.js';
@@ -18,7 +20,10 @@ router.use(restrictTo('patient'));
 router.post('/', upload.single('file'), createHealthLog);
 router.get('/', getHealthLogs);
 router.get('/stats', getHealthStats);
+router.get('/vitals', getCurrentVitals);
 router.get('/:id', getHealthLogById);
+
+router.post('/manual', createManualLog);
 
 router.get('/:logId/test/:testName', getTestDetails);
 
