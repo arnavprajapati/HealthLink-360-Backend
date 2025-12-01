@@ -353,26 +353,26 @@ const calculateBMI = (weightLbs, heightFt, heightIn) => {
 
 export const createManualLog = async (req, res) => {
     try {
-        const { weightLbs, heightFt, heightIn, smokingStatus, description } = req.body;
+        const { weightKg, heightFt, heightIn, smokingStatus, description } = req.body;
         const userId = req.user.id;
 
-        if (!weightLbs || !heightFt) {
+        if (!weightKg || !heightFt) {
             return res.status(400).json({
                 success: false,
                 message: 'Weight and Height are required.'
             });
         }
 
-        const bmi = calculateBMI(weightLbs, heightFt, heightIn || 0);
+        const bmi = calculateBMI(weightKg, heightFt, heightIn || 0);
 
         const readings = [];
 
         readings.push({
             testName: 'Weight',
-            value: weightLbs,
-            unit: 'lbs',
+            value: weightKg, 
+            unit: 'kg',
             category: 'Vitals',
-            status: 'normal', 
+            status: 'normal',
         });
 
         readings.push({
@@ -401,7 +401,7 @@ export const createManualLog = async (req, res) => {
 
         const healthLog = await HealthLog.create({
             userId,
-            diseaseType: 'general', 
+            diseaseType: 'general',
             detectedDisease: 'general',
             readings: readings,
             aiAnalysis: {
