@@ -8,38 +8,72 @@ const healthLogSchema = new mongoose.Schema({
     },
     diseaseType: {
         type: String,
-        enum: ['diabetes', 'hypertension', 'thyroid', 'kidney', 'heart', 'liver', 'cholesterol', 'other'],
-        required: true
+        enum: ['diabetes', 'hypertension', 'thyroid', 'kidney', 'heart', 'liver', 'cholesterol', 'general', 'other'],
+        default: 'general'
     },
     detectedDisease: {
-        type: String, 
+        type: String,
         default: null
     },
-    readings: {
-        type: Map,
-        of: mongoose.Schema.Types.Mixed, 
-        default: {}
+    readings: [{
+        testName: String,
+        value: mongoose.Schema.Types.Mixed,
+        unit: String,
+        normalRange: {
+            min: Number,
+            max: Number,
+            text: String 
+        },
+        status: {
+            type: String,
+            enum: ['normal', 'low', 'high', 'borderline', 'critical'],
+            default: 'normal'
+        },
+        category: String, 
+        healthInfo: {
+            description: String,
+            causes: [String],
+            recommendations: [String],
+            symptoms: [String],
+            relatedTests: [String]
+        }
+    }],
+    aiAnalysis: {
+        summary: String,
+        detectedConditions: [String],
+        riskLevel: {
+            type: String,
+            enum: ['low', 'moderate', 'high', 'critical'],
+            default: 'low'
+        },
+        recommendations: [String],
+        keyFindings: [String],
+        abnormalTests: [String]
     },
     description: {
         type: String,
         trim: true,
-        maxlength: 500
+        maxlength: 1000
     },
     fileUrl: {
         type: String,
-        default: null
+        required: true
     },
     fileName: {
         type: String,
-        default: null
+        required: true
     },
     fileType: {
         type: String,
         enum: ['image', 'pdf'],
+        required: true
+    },
+    rawAiData: {
+        type: Object,
         default: null
     },
-    aiExtractedData: {
-        type: Object,
+    testDate: {
+        type: Date,
         default: null
     },
     recordDate: {
@@ -49,6 +83,9 @@ const healthLogSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+healthLogSchema.index({ userId: 1, recordDate: -1 });
+healthLogSchema.index({ userId: 1, diseaseType: 1 });
 
 const HealthLog = mongoose.model('HealthLog', healthLogSchema);
 export default HealthLog;
