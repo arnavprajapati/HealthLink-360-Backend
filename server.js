@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 
 import authRoutes from './routes/authRoutes.js';
 import healthLogRoutes from './routes/healthLogRoutes.js';
+import healthGoalRoutes from './routes/healthGoalRoutes.js';
+
 
 dotenv.config();
 
@@ -33,6 +35,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
         app.listen(PORT, () => {
             console.log(`🚀 Server running on port ${PORT}`);
+            console.log(`🎯 Goal Tracking API enabled`);
         });
     })
     .catch((err) => {
@@ -42,9 +45,18 @@ mongoose.connect(process.env.MONGODB_URI)
 
 app.use('/api/auth', authRoutes);
 app.use('/api/health-logs', healthLogRoutes);
+app.use('/api/goals', healthGoalRoutes);
 
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'OK', message: 'Server is running' });
+    res.json({
+        status: 'OK',
+        message: 'Server is running',
+        features: {
+            healthLogs: true,
+            goalTracking: true,
+            aiInsights: true
+        }
+    });
 });
 
 app.use((err, req, res, next) => {
@@ -54,3 +66,5 @@ app.use((err, req, res, next) => {
         message: err.message || 'Something went wrong!'
     });
 });
+
+export default app;

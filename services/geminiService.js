@@ -6,7 +6,6 @@ dotenv.config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// Health knowledge database for detailed information
 const healthKnowledge = {
     "Hemoglobin": {
         description: "Hemoglobin carries oxygen from lungs to body tissues and returns carbon dioxide back to lungs.",
@@ -174,10 +173,8 @@ CRITICAL INSTRUCTIONS:
 
         const aiData = JSON.parse(cleanedResponse);
 
-        // Enrich with health knowledge
         if (aiData.readings && Array.isArray(aiData.readings)) {
             aiData.readings = aiData.readings.map(reading => {
-                // Find matching health knowledge
                 const knowledgeKey = Object.keys(healthKnowledge).find(key =>
                     reading.testName.toLowerCase().includes(key.toLowerCase()) ||
                     key.toLowerCase().includes(reading.testName.toLowerCase())
@@ -211,7 +208,6 @@ CRITICAL INSTRUCTIONS:
     }
 };
 
-// Helper function to get health knowledge for a specific test
 export const getHealthKnowledge = (testName) => {
     const knowledgeKey = Object.keys(healthKnowledge).find(key =>
         testName.toLowerCase().includes(key.toLowerCase()) ||
@@ -219,4 +215,80 @@ export const getHealthKnowledge = (testName) => {
     );
 
     return knowledgeKey ? healthKnowledge[knowledgeKey] : null;
+};
+
+export const analyzeHealthGoal = async (goal) => {
+    try {
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+        const knowledge = getHealthKnowledge(goal.parameter);
+
+        const milestonesText = goal.milestones?.map((m, idx) =>
+            `${new Date(m.date).toLocaleDateString()}: ${m.value} ${goal.unit} (${m.note || 'No note'})`
+        ).join('\n') || 'No milestones recorded yet';
+
+        const daysRemaining = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
+        const totalDays = Math.ceil((new Date(goal.deadline) - new Date(goal.startDate || goal.createdAt)) / (1000 * 60 * 60 * 24));
+        const daysElapsed = totalDays - daysRemaining;
+
+        const prompt = `You are a health coach AI. Analyze this health goal and provide personalized insights.
+
+GOAL DETAILS:
+- Parameter: ${goal.parameter}
+- Goal Type: ${goal.goalType} (user wants to ${goal.goalType} this value)
+- Current Value: ${goal.currentValue || 'Not recorded'} ${goal.unit}
+- Target Value: ${goal.targetValue} ${goal.unit}
+- Start Value: ${goal.milestones?.[0]?.value || goal.currentValue || 'Unknown'} ${goal.unit}
+- Progress: ${goal.progress}%
+- Status: ${goal.status}
+- Days Elapsed: ${daysElapsed} days
+- Days Remaining: ${daysRemaining} days
+- Deadline: ${new Date(goal.deadline).toLocaleDateString()}
+
+MILESTONE HISTORY:
+${milestonesText}
+
+${knowledge ? `MEDICAL CONTEXT:
+- Description: ${knowledge.description}
+- Causes of abnormal values: ${JSON.stringify(knowledge.causes)}
+- Symptoms: ${JSON.stringify(knowledge.symptoms)}
+` : ''}
+
+Analyze the progress and provide insights in this JSON format ONLY (no markdown):
+{
+    "assessment": "2-3 sentences assessing current progress - be specific about numbers and percentages",
+    "prediction": "Based on the rate of change, predict when user will reach goal OR if they're on track",
+    "recommendations": [
+        "Specific actionable recommendation 1",
+        "Specific actionable recommendation 2",
+        "Specific actionable recommendation 3"
+    ],
+    "lifestyle": [
+        "Diet or exercise tip relevant to this parameter",
+        "Another lifestyle suggestion",
+        "Daily habit recommendation"
+    ],
+    "warnings": [
+        "Any concerns or warning signs (empty array if none)"
+    ],
+    "motivation": "A short motivational message based on their progress"
+}
+
+Be encouraging but realistic. If progress is slow, provide constructive feedback. Use specific numbers from the data.`;
+
+        const result = await model.generateContent(prompt);
+        const response = result.response.text();
+
+        // Clean response
+        const cleanedResponse = response
+            .replace(/```json\n?|\n?```/g, '')
+            .replace(/```\n?|\n?```/g, '')
+            .trim();
+
+        return JSON.parse(cleanedResponse);
+
+    } catch (error) {
+        console.error('Gemini Goal Analysis Error:', error);
+        throw new Error('Failed to analyze goal with AI: ' + error.message);
+    }
 };
