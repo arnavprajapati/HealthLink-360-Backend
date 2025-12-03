@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
 import healthLogRoutes from './routes/healthLogRoutes.js';
 import healthGoalRoutes from './routes/healthGoalRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 dotenv.config();
 
@@ -63,6 +64,7 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/health-logs', healthLogRoutes);
 app.use('/api/auth/goals', healthGoalRoutes);
+app.use('/api/auth/ai', aiRoutes);
 
 app.get('/api/auth/health', (req, res) => {
     res.json({
