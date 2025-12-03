@@ -10,7 +10,6 @@ import authRoutes from './routes/authRoutes.js';
 import healthLogRoutes from './routes/healthLogRoutes.js';
 import healthGoalRoutes from './routes/healthGoalRoutes.js';
 
-
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,9 +19,27 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
+const allowedOrigins = [
+    process.env.CLIENT_URL,
+    'http://localhost:5173',
+    'http://localhost:5174'
+].filter(Boolean); 
+
 app.use(cors({
-    origin: [process.env.CLIENT_URL, 'http://localhost:5173', 'http://localhost:5174'],
-    credentials: true
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            console.log('Blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -60,7 +77,6 @@ app.get('/api/health', (req, res) => {
 });
 
 app.use((err, req, res, next) => {
-    console.error(err.stack);
     res.status(500).json({
         success: false,
         message: err.message || 'Something went wrong!'
