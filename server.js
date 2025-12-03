@@ -61,10 +61,10 @@ mongoose.connect(process.env.MONGODB_URI)
     });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/health-logs', healthLogRoutes);
-app.use('/api/goals', healthGoalRoutes);
+app.use('/api/auth/health-logs', healthLogRoutes);
+app.use('/api/auth/goals', healthGoalRoutes);
 
-app.get('/api/health', (req, res) => {
+app.get('/api/auth/health', (req, res) => {
     res.json({
         status: 'OK',
         message: 'Server is running',
