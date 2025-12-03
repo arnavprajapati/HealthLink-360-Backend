@@ -57,28 +57,14 @@ export const createHealthGoal = async (req, res) => {
             });
         }
 
-        // Parse values
         const parsedInitialValue = hasInitial ? parseFloat(initialValue) : null;
         const parsedTargetValue = hasTarget ? parseFloat(targetValue) : null;
         const parsedMinValue = hasMin ? parseFloat(minValue) : null;
         const parsedMaxValue = hasMax ? parseFloat(maxValue) : null;
 
-        // Get current value from latest log, or use initialValue as current
-        const latestLog = await HealthLog.findOne({ userId })
-            .sort({ recordDate: -1 });
 
         let currentValue = parsedInitialValue;
-        if (latestLog && latestLog.readings) {
-            const reading = latestLog.readings.find(r =>
-                r.testName.toLowerCase().includes(parameter.toLowerCase()) ||
-                parameter.toLowerCase().includes(r.testName.toLowerCase())
-            );
-            if (reading) {
-                currentValue = parseFloat(reading.value);
-            }
-        }
 
-        // Determine effective goal type (use 'range' if only min/max provided)
         const effectiveGoalType = (!hasTarget && hasRange) ? 'range' : goalType;
 
         const goal = await HealthGoal.create({
@@ -349,6 +335,7 @@ export const editHealthGoal = async (req, res) => {
         }
 
         // Update fields if provided
+        const oldInitialValue = goal.initialValue;
         if (initialValue !== undefined) goal.initialValue = initialValue !== null && initialValue !== '' ? parseFloat(initialValue) : null;
         if (targetValue !== undefined) goal.targetValue = targetValue !== null && targetValue !== '' ? parseFloat(targetValue) : null;
         if (minValue !== undefined) goal.minValue = minValue !== null && minValue !== '' ? parseFloat(minValue) : null;
@@ -356,6 +343,28 @@ export const editHealthGoal = async (req, res) => {
         if (deadline !== undefined) goal.deadline = deadline ? new Date(deadline) : null;
         if (notes !== undefined) goal.notes = notes;
         if (trackingFrequency !== undefined) goal.trackingFrequency = trackingFrequency;
+
+        // If initialValue was changed and milestones has 0 or 1 entry, update currentValue too
+        if (initialValue !== undefined && goal.initialValue !== oldInitialValue) {
+            if (goal.milestones.length <= 1) {
+                // Update currentValue to match new initialValue
+                goal.currentValue = goal.initialValue;
+
+                // Update the first milestone if exists, or create one
+                if (goal.milestones.length === 1) {
+                    goal.milestones[0].value = goal.initialValue;
+                    goal.milestones[0].note = 'Starting value (Updated)';
+                    goal.milestones[0].date = new Date();
+                } else if (goal.milestones.length === 0 && goal.initialValue !== null) {
+                    goal.milestones.push({
+                        date: new Date(),
+                        value: goal.initialValue,
+                        note: 'Starting value (Initial)'
+                    });
+                }
+            }
+            // If more than 1 milestone, don't change currentValue - it should reflect actual progress
+        }
 
         // Validate min < max if both provided
         if (goal.minValue !== null && goal.maxValue !== null && goal.minValue >= goal.maxValue) {
