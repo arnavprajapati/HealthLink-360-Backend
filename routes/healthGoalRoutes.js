@@ -9,6 +9,8 @@ import {
     deleteHealthGoal,
     getGoalStats,
     addMilestone,
+    editMilestone,
+    deleteMilestone,
     analyzeGoalWithAI
 } from '../controllers/healthGoalController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
@@ -29,6 +31,8 @@ router.put('/:id/progress', updateGoalProgress);
 router.post('/update-all', updateAllGoalsProgress);
 
 router.post('/:id/milestone', addMilestone);
+router.put('/:id/milestone/:milestoneIndex', editMilestone);
+router.delete('/:id/milestone/:milestoneIndex', deleteMilestone);
 router.post('/:id/analyze', analyzeGoalWithAI);
 
 export default router;

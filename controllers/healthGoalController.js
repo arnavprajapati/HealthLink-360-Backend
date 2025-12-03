@@ -529,6 +529,123 @@ export const addMilestone = async (req, res) => {
     }
 };
 
+// Edit milestone in goal
+export const editMilestone = async (req, res) => {
+    try {
+        const { id, milestoneIndex } = req.params;
+        const userId = req.user.id;
+        const { value, note } = req.body;
+
+        const goal = await HealthGoal.findOne({ _id: id, userId });
+
+        if (!goal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Goal not found'
+            });
+        }
+
+        const idx = parseInt(milestoneIndex);
+        if (idx < 0 || idx >= goal.milestones.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Milestone not found'
+            });
+        }
+
+        if (value !== undefined) goal.milestones[idx].value = parseFloat(value);
+        if (note !== undefined) goal.milestones[idx].note = note;
+
+        if (idx === goal.milestones.length - 1 && value !== undefined) {
+            goal.currentValue = parseFloat(value);
+        }
+
+        goal.calculateProgress();
+
+        if (goal.checkAchievement()) {
+            goal.status = 'achieved';
+        } else if (goal.status === 'achieved') {
+            goal.status = 'in-progress';
+        }
+
+        await goal.save();
+
+        res.json({
+            success: true,
+            message: 'Milestone updated successfully',
+            data: goal
+        });
+
+    } catch (error) {
+        console.error('Edit Milestone Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to edit milestone'
+        });
+    }
+};
+
+// Delete milestone from goal
+export const deleteMilestone = async (req, res) => {
+    try {
+        const { id, milestoneIndex } = req.params;
+        const userId = req.user.id;
+
+        const goal = await HealthGoal.findOne({ _id: id, userId });
+
+        if (!goal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Goal not found'
+            });
+        }
+
+        const idx = parseInt(milestoneIndex);
+        if (idx < 0 || idx >= goal.milestones.length) {
+            return res.status(404).json({
+                success: false,
+                message: 'Milestone not found'
+            });
+        }
+
+        if (goal.milestones.length === 1) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete the last milestone. Delete the goal instead.'
+            });
+        }
+
+        goal.milestones.splice(idx, 1);
+
+        if (goal.milestones.length > 0) {
+            goal.currentValue = goal.milestones[goal.milestones.length - 1].value;
+        }
+
+        goal.calculateProgress();
+
+        if (goal.checkAchievement()) {
+            goal.status = 'achieved';
+        } else if (goal.status === 'achieved') {
+            goal.status = 'in-progress';
+        }
+
+        await goal.save();
+
+        res.json({
+            success: true,
+            message: 'Milestone deleted successfully',
+            data: goal
+        });
+
+    } catch (error) {
+        console.error('Delete Milestone Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete milestone'
+        });
+    }
+};
+
 // Analyze goal with Gemini AI
 export const analyzeGoalWithAI = async (req, res) => {
     try {
