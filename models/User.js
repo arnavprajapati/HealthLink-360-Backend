@@ -37,6 +37,24 @@ const userSchema = new mongoose.Schema({
         type: String,
         sparse: true,
         unique: true
+    },
+    doctorProfile: {
+        speciality: {
+            type: String,
+            trim: true
+        },
+        clinicName: {
+            type: String,
+            trim: true
+        },
+        experience: {
+            type: Number,
+            default: 0
+        },
+        qualification: {
+            type: String,
+            trim: true
+        }
     }
 }, {
     timestamps: true

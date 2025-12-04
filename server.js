@@ -9,6 +9,9 @@ import { fileURLToPath } from 'url';
 import authRoutes from './routes/authRoutes.js';
 import healthLogRoutes from './routes/healthLogRoutes.js';
 import healthGoalRoutes from './routes/healthGoalRoutes.js';
+import connectionRoutes from './routes/connectionRoutes.js';
+import appointmentRoutes from './routes/appointmentRoutes.js';
+
 
 dotenv.config();
 
@@ -24,12 +27,12 @@ const allowedOrigins = [
     process.env.CLIENT_URL,
     'http://localhost:5173',
     'http://localhost:5174'
-].filter(Boolean); 
+].filter(Boolean);
 
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.indexOf(origin) !== -1) {
             callback(null, true);
         } else {
@@ -61,8 +64,11 @@ mongoose.connect(process.env.MONGODB_URI)
     });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/auth/health-logs', healthLogRoutes);
-app.use('/api/auth/goals', healthGoalRoutes);
+app.use('/api/health-logs', healthLogRoutes);
+app.use('/api/goals', healthGoalRoutes);
+app.use('/api/connect', connectionRoutes);
+app.use('/api/appointments', appointmentRoutes);
+
 
 app.get('/api/auth/health', (req, res) => {
     res.json({
