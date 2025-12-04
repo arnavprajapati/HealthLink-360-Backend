@@ -1,7 +1,9 @@
 import HealthGoal from '../models/HealthGoal.js';
 import HealthLog from '../models/HealthLog.js';
+import User from '../models/User.js';
 import mongoose from 'mongoose';
 import { analyzeHealthGoal } from '../services/geminiService.js';
+import { google } from 'googleapis';
 
 export const createHealthGoal = async (req, res) => {
     try {
@@ -411,7 +413,7 @@ export const deleteHealthGoal = async (req, res) => {
         const { id } = req.params;
         const userId = req.user.id;
 
-        const goal = await HealthGoal.findOneAndDelete({ _id: id, userId });
+        const goal = await HealthGoal.findOne({ _id: id, userId });
 
         if (!goal) {
             return res.status(404).json({
@@ -419,6 +421,32 @@ export const deleteHealthGoal = async (req, res) => {
                 message: 'Goal not found'
             });
         }
+
+        // If goal has a Google Calendar event, delete it
+        if (goal.googleEventId) {
+            try {
+                const user = await User.findById(userId);
+                if (user?.googleTokens?.access_token) {
+                    const oauth2Client = new google.auth.OAuth2(
+                        process.env.GOOGLE_CLIENT_ID,
+                        process.env.GOOGLE_CLIENT_SECRET,
+                        process.env.GOOGLE_REDIRECT_URI
+                    );
+                    oauth2Client.setCredentials(user.googleTokens);
+                    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+                    await calendar.events.delete({
+                        calendarId: 'primary',
+                        eventId: goal.googleEventId
+                    });
+                }
+            } catch (calendarError) {
+                console.error('Failed to delete calendar event:', calendarError);
+                // Continue with goal deletion even if calendar deletion fails
+            }
+        }
+
+        await HealthGoal.findByIdAndDelete(id);
 
         res.json({
             success: true,
