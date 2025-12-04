@@ -70,13 +70,10 @@ app.use('/api/health-logs', healthLogRoutes);
 app.use('/api/goals', healthGoalRoutes);
 app.use('/api/connect', connectionRoutes);
 app.use('/api/appointments', appointmentRoutes);
-
-app.use('/api/auth/health-logs', healthLogRoutes);
-app.use('/api/auth/goals', healthGoalRoutes);
-app.use('/api/auth/ai', aiRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/google', googleRoutes);
 
-app.get('/api/auth/health', (req, res) => {
+app.get('/api/health', (req, res) => {
     res.json({
         status: 'OK',
         message: 'Server is running',
