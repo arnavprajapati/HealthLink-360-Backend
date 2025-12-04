@@ -1,9 +1,7 @@
 import Connection from '../models/Connection.js';
 import User from '../models/User.js';
 
-// @desc    Send connection request to a doctor
-// @route   POST /api/connect/request
-// @access  Private (Patient only)
+
 export const sendConnectionRequest = async (req, res) => {
     try {
         const { doctorEmail } = req.body;
@@ -67,9 +65,7 @@ export const sendConnectionRequest = async (req, res) => {
     }
 };
 
-// @desc    Get incoming connection requests for doctor
-// @route   GET /api/connect/requests
-// @access  Private (Doctor only)
+
 export const getIncomingRequests = async (req, res) => {
     try {
         const requests = await Connection.find({
@@ -93,9 +89,6 @@ export const getIncomingRequests = async (req, res) => {
     }
 };
 
-// @desc    Respond to connection request (Accept/Reject)
-// @route   PUT /api/connect/respond
-// @access  Private (Doctor only)
 export const respondToRequest = async (req, res) => {
     try {
         const { requestId, status } = req.body; // status: 'accepted' or 'rejected'
@@ -136,9 +129,7 @@ export const respondToRequest = async (req, res) => {
     }
 };
 
-// @desc    Get all linked patients for a doctor
-// @route   GET /api/connect/patients
-// @access  Private (Doctor only)
+
 export const getLinkedPatients = async (req, res) => {
     try {
         const connections = await Connection.find({
@@ -168,9 +159,6 @@ export const getLinkedPatients = async (req, res) => {
     }
 };
 
-// @desc    Get all linked doctors for a patient
-// @route   GET /api/connect/doctors
-// @access  Private (Patient only)
 export const getLinkedDoctors = async (req, res) => {
     try {
         const connections = await Connection.find({
