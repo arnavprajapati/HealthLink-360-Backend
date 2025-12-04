@@ -21,7 +21,7 @@ const setTokenCookie = (res, token) => {
 
 export const signup = async (req, res) => {
     try {
-        const { email, password, role } = req.body;
+        const { email, password, role, speciality, clinicName, experience, qualification } = req.body;
 
         if (!email || !password) {
             return res.status(400).json({
@@ -30,7 +30,7 @@ export const signup = async (req, res) => {
             });
         }
 
-        const existingUser = await User.findOne({ email });
+        const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return res.status(400).json({
                 success: false,
@@ -39,10 +39,16 @@ export const signup = async (req, res) => {
         }
 
         const user = await User.create({
-            email,
+            email: email.toLowerCase(),
             password,
             displayName: email.split('@')[0],
-            role: role || 'patient'
+            role: role || 'patient',
+            doctorProfile: role === 'doctor' ? {
+                speciality,
+                clinicName,
+                experience,
+                qualification
+            } : undefined
         });
 
         const token = generateToken(user._id);
@@ -79,7 +85,7 @@ export const login = async (req, res) => {
             });
         }
 
-        const user = await User.findOne({ email }).select('+password');
+        const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -162,7 +168,8 @@ export const getCurrentUser = async (req, res) => {
                 email: user.email,
                 displayName: user.displayName,
                 role: user.role,
-                photoURL: user.photoURL
+                photoURL: user.photoURL,
+                doctorProfile: user.doctorProfile
             }
         });
     } catch (error) {
@@ -170,6 +177,53 @@ export const getCurrentUser = async (req, res) => {
         res.status(500).json({
             success: false,
             message: error.message || 'Error fetching user'
+        });
+    }
+};
+
+export const updateUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        const { displayName, speciality, clinicName, experience, qualification } = req.body;
+
+        if (displayName) user.displayName = displayName;
+
+        if (user.role === 'doctor') {
+            if (!user.doctorProfile) user.doctorProfile = {};
+            
+            if (speciality) user.doctorProfile.speciality = speciality;
+            if (clinicName) user.doctorProfile.clinicName = clinicName;
+            if (experience) user.doctorProfile.experience = experience;
+            if (qualification) user.doctorProfile.qualification = qualification;
+        }
+
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Profile updated successfully',
+            user: {
+                uid: user._id,
+                email: user.email,
+                displayName: user.displayName,
+                role: user.role,
+                photoURL: user.photoURL,
+                doctorProfile: user.doctorProfile
+            }
+        });
+    } catch (error) {
+        console.error('Update Profile Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error updating profile'
         });
     }
 };
