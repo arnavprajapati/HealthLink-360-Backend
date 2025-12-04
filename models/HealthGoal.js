@@ -12,11 +12,11 @@ const healthGoalSchema = new mongoose.Schema({
     },
     parameterKey: {
         type: String,
-        default: null  
+        default: null
     },
     customParameterName: {
         type: String,
-        default: null  
+        default: null
     },
     initialValue: {
         type: Number,
@@ -79,6 +79,15 @@ const healthGoalSchema = new mongoose.Schema({
     notes: {
         type: String,
         maxlength: 500
+    },
+    // Google Calendar sync
+    googleEventId: {
+        type: String,
+        default: null
+    },
+    syncToGoogleCalendar: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

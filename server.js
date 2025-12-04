@@ -12,6 +12,8 @@ import healthGoalRoutes from './routes/healthGoalRoutes.js';
 import connectionRoutes from './routes/connectionRoutes.js';
 import appointmentRoutes from './routes/appointmentRoutes.js';
 
+import aiRoutes from './routes/aiRoutes.js';
+import googleRoutes from './routes/googleRoutes.js';
 
 dotenv.config();
 
@@ -69,6 +71,10 @@ app.use('/api/goals', healthGoalRoutes);
 app.use('/api/connect', connectionRoutes);
 app.use('/api/appointments', appointmentRoutes);
 
+app.use('/api/auth/health-logs', healthLogRoutes);
+app.use('/api/auth/goals', healthGoalRoutes);
+app.use('/api/auth/ai', aiRoutes);
+app.use('/api/google', googleRoutes);
 
 app.get('/api/auth/health', (req, res) => {
     res.json({

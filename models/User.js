@@ -55,6 +55,17 @@ const userSchema = new mongoose.Schema({
             type: String,
             trim: true
         }
+    // Google Calendar OAuth tokens
+    googleTokens: {
+        access_token: { type: String, default: null },
+        refresh_token: { type: String, default: null },
+        scope: { type: String, default: null },
+        token_type: { type: String, default: null },
+        expiry_date: { type: Number, default: null }
+    },
+    googleCalendarConnected: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

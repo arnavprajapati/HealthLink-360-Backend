@@ -1,5 +1,6 @@
 import HealthLog from '../models/HealthLog.js';
 import { analyzeHealthDocument, getHealthKnowledge } from '../services/geminiService.js';
+import uploadOnCloudinary from '../config/cloudinaryConfig.js';
 import fs from 'fs';
 import mongoose from 'mongoose';
 
@@ -11,11 +12,10 @@ export const createHealthLog = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'Please upload a medical report (image or PDF)'
+                message: 'Please upload a medical report (image or PDF, max 5MB)'
             });
         }
 
-        const fileUrl = `/uploads/${req.file.filename}`;
         const fileName = req.file.originalname;
         const fileType = req.file.mimetype.startsWith('image') ? 'image' : 'pdf';
 
@@ -34,6 +34,16 @@ export const createHealthLog = async (req, res) => {
             return res.status(500).json({
                 success: false,
                 message: 'Failed to analyze the medical report. Please try again with a clearer image or PDF.'
+            });
+        }
+
+        let fileUrl;
+        try {
+            fileUrl = await uploadOnCloudinary(req.file.path);
+        } catch (uploadError) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to upload medical report. Please try again.'
             });
         }
 
@@ -369,7 +379,7 @@ export const createManualLog = async (req, res) => {
 
         readings.push({
             testName: 'Weight',
-            value: weightKg, 
+            value: weightKg,
             unit: 'kg',
             category: 'Vitals',
             status: 'normal',
