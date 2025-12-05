@@ -7,7 +7,8 @@ import {
     getHealthStats,
     deleteHealthLog,
     getCurrentVitals,
-    createManualLog
+    createManualLog,
+    updateHealthLogSharing
 } from '../controllers/healthLogController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 import upload from '../config/multerConfig.js';
@@ -26,6 +27,8 @@ router.get('/:id', getHealthLogById);
 router.post('/manual', createManualLog);
 
 router.get('/:logId/test/:testName', getTestDetails);
+
+router.patch('/:id/sharing', updateHealthLogSharing);
 
 router.delete('/:id', deleteHealthLog);
 

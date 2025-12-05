@@ -441,3 +441,48 @@ export const createManualLog = async (req, res) => {
         });
     }
 };
+
+export const updateHealthLogSharing = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { visibility, sharedWith } = req.body;
+        const userId = req.user.id;
+
+        const healthLog = await HealthLog.findOne({ _id: id, userId });
+
+        if (!healthLog) {
+            return res.status(404).json({
+                success: false,
+                message: 'Health log not found'
+            });
+        }
+
+        // Validate visibility
+        if (!['private', 'all_doctors', 'specific_doctors'].includes(visibility)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid visibility option'
+            });
+        }
+
+        // Update sharing settings
+        healthLog.sharing = {
+            visibility,
+            sharedWith: visibility === 'specific_doctors' ? (sharedWith || []) : []
+        };
+
+        await healthLog.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Sharing settings updated successfully',
+            data: healthLog
+        });
+    } catch (error) {
+        console.error('Update Health Log Sharing Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to update sharing settings'
+        });
+    }
+};

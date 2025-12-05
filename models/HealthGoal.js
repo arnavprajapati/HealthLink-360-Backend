@@ -80,7 +80,6 @@ const healthGoalSchema = new mongoose.Schema({
         type: String,
         maxlength: 500
     },
-    // Google Calendar sync
     googleEventId: {
         type: String,
         default: null
@@ -88,6 +87,17 @@ const healthGoalSchema = new mongoose.Schema({
     syncToGoogleCalendar: {
         type: Boolean,
         default: false
+    },
+    sharing: {
+        visibility: {
+            type: String,
+            enum: ['private', 'all_doctors', 'specific_doctors'],
+            default: 'private'
+        },
+        sharedWith: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }]
     }
 }, {
     timestamps: true

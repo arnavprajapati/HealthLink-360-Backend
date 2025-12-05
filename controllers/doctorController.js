@@ -8,7 +8,6 @@ export const getPatientHealthData = async (req, res) => {
         const { patientId } = req.params;
         const doctorId = req.user.id;
 
-        // 1. Verify connection exists and is accepted
         const connection = await Connection.findOne({
             doctor: doctorId,
             patient: patientId,
@@ -22,8 +21,13 @@ export const getPatientHealthData = async (req, res) => {
             });
         }
 
-        const logs = await HealthLog.find({ userId: patientId })
-            .sort({ recordDate: -1 });
+        const logs = await HealthLog.find({
+            userId: patientId,
+            $or: [
+                { 'sharing.visibility': 'all_doctors' },
+                { 'sharing.visibility': 'specific_doctors', 'sharing.sharedWith': doctorId }
+            ]
+        }).sort({ recordDate: -1 });
 
         res.status(200).json({
             success: true,
@@ -44,7 +48,6 @@ export const getPatientGoals = async (req, res) => {
         const { patientId } = req.params;
         const doctorId = req.user.id;
 
-        // Verify connection exists and is accepted
         const connection = await Connection.findOne({
             doctor: doctorId,
             patient: patientId,
@@ -58,9 +61,13 @@ export const getPatientGoals = async (req, res) => {
             });
         }
 
-        // Fetch Health Goals
-        const goals = await HealthGoal.find({ userId: patientId })
-            .sort({ createdAt: -1 });
+        const goals = await HealthGoal.find({
+            userId: patientId,
+            $or: [
+                { 'sharing.visibility': 'all_doctors' },
+                { 'sharing.visibility': 'specific_doctors', 'sharing.sharedWith': doctorId }
+            ]
+        }).sort({ createdAt: -1 });
 
         res.status(200).json({
             success: true,
