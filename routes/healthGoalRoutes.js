@@ -11,7 +11,8 @@ import {
     addMilestone,
     editMilestone,
     deleteMilestone,
-    analyzeGoalWithAI
+    analyzeGoalWithAI,
+    updateHealthGoalSharing
 } from '../controllers/healthGoalController.js';
 import { protect, restrictTo } from '../middleware/authMiddleware.js';
 
@@ -34,5 +35,7 @@ router.post('/:id/milestone', addMilestone);
 router.put('/:id/milestone/:milestoneIndex', editMilestone);
 router.delete('/:id/milestone/:milestoneIndex', deleteMilestone);
 router.post('/:id/analyze', analyzeGoalWithAI);
+
+router.patch('/:id/sharing', updateHealthGoalSharing);
 
 export default router;

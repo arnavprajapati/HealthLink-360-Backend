@@ -705,3 +705,49 @@ export const analyzeGoalWithAI = async (req, res) => {
         });
     }
 };
+
+// Update sharing settings for a health goal
+export const updateHealthGoalSharing = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { visibility, sharedWith } = req.body;
+        const userId = req.user.id;
+
+        const goal = await HealthGoal.findOne({ _id: id, userId });
+
+        if (!goal) {
+            return res.status(404).json({
+                success: false,
+                message: 'Health goal not found'
+            });
+        }
+
+        // Validate visibility
+        if (!['private', 'all_doctors', 'specific_doctors'].includes(visibility)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid visibility option'
+            });
+        }
+
+        // Update sharing settings
+        goal.sharing = {
+            visibility,
+            sharedWith: visibility === 'specific_doctors' ? (sharedWith || []) : []
+        };
+
+        await goal.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Sharing settings updated successfully',
+            data: goal
+        });
+    } catch (error) {
+        console.error('Update Health Goal Sharing Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to update sharing settings'
+        });
+    }
+};

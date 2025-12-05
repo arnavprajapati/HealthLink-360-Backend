@@ -1,4 +1,3 @@
-// fileName: HealthLog.js (UPDATED)
 import mongoose from 'mongoose';
 
 const healthLogSchema = new mongoose.Schema({
@@ -23,14 +22,14 @@ const healthLogSchema = new mongoose.Schema({
         normalRange: {
             min: Number,
             max: Number,
-            text: String 
+            text: String
         },
         status: {
             type: String,
             enum: ['normal', 'low', 'high', 'borderline', 'critical'],
             default: 'normal'
         },
-        category: String, 
+        category: String,
         healthInfo: {
             description: String,
             causes: [String],
@@ -76,6 +75,17 @@ const healthLogSchema = new mongoose.Schema({
     testDate: {
         type: Date,
         default: null
+    },
+    sharing: {
+        visibility: {
+            type: String,
+            enum: ['private', 'all_doctors', 'specific_doctors'],
+            default: 'private'
+        },
+        sharedWith: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }]
     },
     recordDate: {
         type: Date,
