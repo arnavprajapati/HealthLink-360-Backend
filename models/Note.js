@@ -23,7 +23,33 @@ const noteSchema = new mongoose.Schema({
     date: {
         type: Date,
         default: Date.now
-    }
+    },
+    sender: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    senderRole: {
+        type: String,
+        enum: ['doctor', 'patient'],
+        required: true
+    },
+    isRead: {
+        type: Boolean,
+        default: false
+    },
+    readAt: {
+        type: Date
+    },
+    parentNote: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Note',
+        default: null
+    },
+    replies: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Note'
+    }]
 }, {
     timestamps: true
 });
