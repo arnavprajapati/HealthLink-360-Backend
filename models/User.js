@@ -15,6 +15,15 @@ const userSchema = new mongoose.Schema({
         required: [true, 'Password is required'],
         minlength: [6, 'Password must be at least 6 characters']
     },
+    name: {
+        type: String,
+        required: [true, 'Name is required'],
+        trim: true
+    },
+    emailVerified: {
+        type: Boolean,
+        default: false
+    },
     displayName: {
         type: String,
         trim: true
@@ -71,16 +80,12 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
-
 userSchema.pre('save', async function () {
-    if (this.authProvider !== 'email' || !this.isModified('password')) {
-
-        return;
-    }
+    if (!this.isModified('password')) return;
+    if (this.password && this.password.startsWith('google_auth_placeholder_')) return;
 
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-
 });
 
 userSchema.methods.comparePassword = async function (candidatePassword) {
