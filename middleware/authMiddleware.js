@@ -11,6 +11,7 @@ export const protect = async (req, res, next) => {
                 message: 'Not authorized, no token'
             });
         }
+        //commit
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
