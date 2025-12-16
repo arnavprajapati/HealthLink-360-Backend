@@ -43,7 +43,7 @@ export const getAiChatResponse = async (query, contextSummary, chatHistory) => {
 
     const chatHistoryText = chatHistory && Array.isArray(chatHistory) && chatHistory.length > 0
         ? `PREVIOUS CONVERSATION HISTORY:\n${chatHistory.map(c =>
-            `- ${c.role.toUpperCase()}: ${c.text || ''}` 
+            `- ${c.role.toUpperCase()}: ${c.text || ''}`
         ).join('\n')}\n`
         : '';
 
@@ -78,7 +78,7 @@ RESPONSE REQUIREMENTS:
 6. Your output MUST be a valid JSON object with "response" and "suggestions" fields.
 7. Include 3 relevant follow-up questions the patient might want to ask.`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-robotics-er-1.5-preview' });
 
     try {
         // 3. Execute the API call with the CORRECT structure
@@ -113,7 +113,7 @@ RESPONSE REQUIREMENTS:
         }
 
         return {
-            modelUsed: 'gemini-2.5-flash',
+            modelUsed: 'gemini-robotics-er-1.5-preview',
             data: aiResponse
         };
 

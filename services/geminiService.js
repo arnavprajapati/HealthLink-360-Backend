@@ -101,7 +101,7 @@ const healthKnowledge = {
 
 export const analyzeHealthDocument = async (filePath, fileType) => {
     try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-robotics-er-1.5-preview' });
 
         let fileData;
         if (fileType === 'pdf') {
@@ -219,7 +219,7 @@ export const getHealthKnowledge = (testName) => {
 
 export const analyzeHealthGoal = async (goal) => {
     try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-robotics-er-1.5-preview' });
 
         const knowledge = getHealthKnowledge(goal.parameter);
 
