@@ -40,7 +40,7 @@ export const googleCallback = async (req, res) => {
         const userId = state;
 
         if (!code) {
-            return res.redirect(`${process.env.APP_BASE_URL}/calendar?error=no_code`);
+            return res.redirect(`${process.env.CLIENT_URL}/calendar?error=no_code`);
         }
 
         const { tokens } = await oauth2Client.getToken(code);
@@ -57,10 +57,10 @@ export const googleCallback = async (req, res) => {
             googleCalendarConnected: true
         });
 
-        res.redirect(`${process.env.APP_BASE_URL}/calendar?success=true`);
+        res.redirect(`${process.env.CLIENT_URL}/calendar?success=true`);
     } catch (error) {
         console.error('OAuth Callback Error:', error);
-        res.redirect(`${process.env.APP_BASE_URL}/calendar?error=auth_failed`);
+        res.redirect(`${process.env.CLIENT_URL}/calendar?error=auth_failed`);
     }
 };
 
