@@ -350,16 +350,16 @@ export const getCurrentVitals = async (req, res) => {
     }
 };
 
-const calculateBMI = (weightLbs, heightFt, heightIn) => {
-    const weightKg = parseFloat(weightLbs) * 0.453592;
+const calculateBMI = (weightKg, heightFt, heightIn) => {
     const heightTotalInches = (parseFloat(heightFt) * 12) + parseFloat(heightIn);
     const heightMeters = heightTotalInches * 0.0254;
 
     if (weightKg > 0 && heightMeters > 0) {
-        return (weightKg / (heightMeters * heightMeters)).toFixed(2);
+        return +(weightKg / (heightMeters * heightMeters)).toFixed(2);
     }
     return null;
 };
+
 
 export const createManualLog = async (req, res) => {
     try {
