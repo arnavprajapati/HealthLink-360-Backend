@@ -10,14 +10,13 @@ const oauth2Client = new google.auth.OAuth2(
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
-
 export const getGoogleAuthUrl = async (req, res) => {
     try {
         const url = oauth2Client.generateAuthUrl({
             access_type: 'offline',
             scope: SCOPES,
             prompt: 'consent',
-            state: req.user.id // Pass user ID in state
+            state: req.user.id 
         });
 
         res.json({
@@ -33,38 +32,72 @@ export const getGoogleAuthUrl = async (req, res) => {
     }
 };
 
-// Handle OAuth callback
 export const googleCallback = async (req, res) => {
     try {
-        const { code, state } = req.query;
+        const { code, state, error } = req.query;
         const userId = state;
 
+        console.log('🔵 Google Callback Received:', { code: !!code, state: userId, error });
+
+        if (error) {
+            console.error('❌ OAuth Error from Google:', error);
+            return res.redirect(`${process.env.CLIENT_URL}/calendar?error=${error}`);
+        }
+
         if (!code) {
+            console.error('❌ No authorization code received');
             return res.redirect(`${process.env.CLIENT_URL}/calendar?error=no_code`);
         }
 
-        const { tokens } = await oauth2Client.getToken(code);
+        if (!userId) {
+            console.error('❌ No user ID in state parameter');
+            return res.redirect(`${process.env.CLIENT_URL}/calendar?error=invalid_state`);
+        }
 
-        // Save tokens to user
-        await User.findByIdAndUpdate(userId, {
-            googleTokens: {
-                access_token: tokens.access_token,
-                refresh_token: tokens.refresh_token,
-                scope: tokens.scope,
-                token_type: tokens.token_type,
-                expiry_date: tokens.expiry_date
+        const user = await User.findById(userId);
+        if (!user) {
+            console.error('❌ User not found:', userId);
+            return res.redirect(`${process.env.CLIENT_URL}/calendar?error=user_not_found`);
+        }
+
+        console.log('🟢 Exchanging code for tokens...');
+        const { tokens } = await oauth2Client.getToken(code);
+        
+        console.log('🟢 Tokens received:', {
+            hasAccessToken: !!tokens.access_token,
+            hasRefreshToken: !!tokens.refresh_token,
+            expiryDate: tokens.expiry_date
+        });
+
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            {
+                googleTokens: {
+                    access_token: tokens.access_token,
+                    refresh_token: tokens.refresh_token,
+                    scope: tokens.scope,
+                    token_type: tokens.token_type,
+                    expiry_date: tokens.expiry_date
+                },
+                googleCalendarConnected: true
             },
-            googleCalendarConnected: true
+            { new: true }
+        );
+
+        console.log('✅ User updated successfully:', {
+            userId: updatedUser._id,
+            connected: updatedUser.googleCalendarConnected,
+            hasTokens: !!updatedUser.googleTokens?.access_token
         });
 
         res.redirect(`${process.env.CLIENT_URL}/calendar?success=true`);
     } catch (error) {
-        console.error('OAuth Callback Error:', error);
+        console.error('❌ OAuth Callback Error:', error.message);
+        console.error('Error Details:', error);
         res.redirect(`${process.env.CLIENT_URL}/calendar?error=auth_failed`);
     }
 };
 
-// Helper: Get authenticated calendar client
 const getCalendarClient = async (userId) => {
     const user = await User.findById(userId);
 
@@ -74,16 +107,13 @@ const getCalendarClient = async (userId) => {
 
     oauth2Client.setCredentials(user.googleTokens);
 
-    // Check if token needs refresh
     if (user.googleTokens.expiry_date && Date.now() >= user.googleTokens.expiry_date) {
+        console.log('🔄 Refreshing expired token...');
         const { credentials } = await oauth2Client.refreshAccessToken();
 
         await User.findByIdAndUpdate(userId, {
-            googleTokens: {
-                ...user.googleTokens,
-                access_token: credentials.access_token,
-                expiry_date: credentials.expiry_date
-            }
+            'googleTokens.access_token': credentials.access_token,
+            'googleTokens.expiry_date': credentials.expiry_date
         });
 
         oauth2Client.setCredentials(credentials);
@@ -92,14 +122,14 @@ const getCalendarClient = async (userId) => {
     return google.calendar({ version: 'v3', auth: oauth2Client });
 };
 
-// Check connection status
 export const checkConnection = async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
 
         res.json({
             success: true,
-            connected: user?.googleCalendarConnected || false
+            connected: user?.googleCalendarConnected || false,
+            hasTokens: !!user?.googleTokens?.access_token
         });
     } catch (error) {
         console.error('Check Connection Error:', error);
@@ -110,7 +140,6 @@ export const checkConnection = async (req, res) => {
     }
 };
 
-// Create calendar event
 export const createEvent = async (req, res) => {
     try {
         const { title, description, startDateTime, endDateTime, recurrence, goalId } = req.body;
@@ -145,9 +174,8 @@ export const createEvent = async (req, res) => {
             }
         };
 
-        // Add weekly recurrence if specified
         if (recurrence) {
-            event.recurrence = [recurrence]; // e.g., "RRULE:FREQ=WEEKLY"
+            event.recurrence = [recurrence];
         }
 
         const response = await calendar.events.insert({
@@ -157,7 +185,6 @@ export const createEvent = async (req, res) => {
 
         const eventId = response.data.id;
 
-        // If goalId provided, update the goal with eventId
         if (goalId) {
             await HealthGoal.findOneAndUpdate(
                 { _id: goalId, userId },
@@ -182,7 +209,6 @@ export const createEvent = async (req, res) => {
     }
 };
 
-// Delete calendar event
 export const deleteEvent = async (req, res) => {
     try {
         const { eventId } = req.body;
@@ -202,7 +228,6 @@ export const deleteEvent = async (req, res) => {
             eventId: eventId
         });
 
-        // Clear eventId from any goal that has it
         await HealthGoal.updateMany(
             { userId, googleEventId: eventId },
             { googleEventId: null, syncToGoogleCalendar: false }
@@ -215,7 +240,6 @@ export const deleteEvent = async (req, res) => {
     } catch (error) {
         console.error('Delete Event Error:', error);
 
-        // If event not found, still consider it success
         if (error.code === 404 || error.message?.includes('Not Found')) {
             await HealthGoal.updateMany(
                 { userId: req.user.id, googleEventId: req.body.eventId },
@@ -235,7 +259,6 @@ export const deleteEvent = async (req, res) => {
     }
 };
 
-// Get synced events (goals with Google Calendar events)
 export const getSyncedEvents = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -243,13 +266,13 @@ export const getSyncedEvents = async (req, res) => {
         const goals = await HealthGoal.find({
             userId,
             googleEventId: { $ne: null }
-        }).select('parameter googleEventId trackingFrequency deadline createdAt');
+        }).select('parameter customParameterName googleEventId trackingFrequency deadline createdAt');
 
         res.json({
             success: true,
             data: goals.map(goal => ({
                 goalId: goal._id,
-                title: goal.parameter,
+                title: goal.customParameterName || goal.parameter,
                 googleEventId: goal.googleEventId,
                 frequency: goal.trackingFrequency,
                 deadline: goal.deadline,
@@ -260,15 +283,25 @@ export const getSyncedEvents = async (req, res) => {
         console.error('Get Synced Events Error:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to fetch synced events'
+            message: 'Failed to fetch synced events',
+            data: []
         });
     }
 };
 
-// Disconnect Google Calendar
 export const disconnectGoogle = async (req, res) => {
     try {
         const userId = req.user.id;
+
+        const user = await User.findById(userId);
+        if (user?.googleTokens?.access_token) {
+            try {
+                await oauth2Client.revokeToken(user.googleTokens.access_token);
+                console.log('✅ Google token revoked');
+            } catch (error) {
+                console.error('⚠️ Failed to revoke token (will continue):', error.message);
+            }
+        }
 
         await User.findByIdAndUpdate(userId, {
             googleTokens: {
@@ -281,7 +314,6 @@ export const disconnectGoogle = async (req, res) => {
             googleCalendarConnected: false
         });
 
-        // Clear all google event IDs from user's goals
         await HealthGoal.updateMany(
             { userId },
             { googleEventId: null, syncToGoogleCalendar: false }
