@@ -55,7 +55,7 @@ mongoose.connect(process.env.MONGODB_URI)
     .then(() => {
         console.log('✅ MongoDB Connected Successfully');
 
-        app.listen(PORT, () => {
+        app.listen(PORT, "0.0.0.0" , () => {
             console.log(`🚀 Server running on port ${PORT}`);
             console.log(`🎯 Goal Tracking API enabled`);
         });
