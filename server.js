@@ -65,6 +65,10 @@ mongoose.connect(process.env.MONGODB_URI)
         process.exit(1);
     });
 
+app.get('/', (req, res) => {
+    res.send('HealthLink360 Backend is running 🚀');
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/health-logs', healthLogRoutes);
 app.use('/api/goals', healthGoalRoutes);
